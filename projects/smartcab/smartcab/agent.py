@@ -74,8 +74,8 @@ class LearningAgent(Agent):
         self.color = 'red'  # override color
         self.planner = RoutePlanner(self.env, self)  # simple route planner to get next_waypoint
         # TODO: Initialize any additional variables here
-        # self.QLearning = QLearning(epsilon=0.5, alpha=0.95, gamma=0.9)
-        self.QLearning = pickle.load(open('./QLearning.pkl'))
+        self.QLearning = QLearning(epsilon=0.5, alpha=0.95, gamma=0.9)
+        # self.QLearning = pickle.load(open('./QLearning.pkl'))
 
     def reset(self, destination=None):
         self.planner.route_to(destination)
@@ -118,8 +118,8 @@ def run():
 
     # Now simulate it
     sim = Simulator(e, update_delay=0.0001)  # reduce update_delay or add 'display=False' to speed up simulation
-    sim.run(n_trials=2000)# press Esc or close pygame window to quit
-    pickle.dump(a.QLearning, open(os.path.join('./', 'QLearning.pkl'), 'wb'))
+    sim.run(n_trials=500)# press Esc or close pygame window to quit
+    # pickle.dump(a.QLearning, open(os.path.join('./', 'QLearning.pkl'), 'wb'))
 
 if __name__ == '__main__':
     run()
