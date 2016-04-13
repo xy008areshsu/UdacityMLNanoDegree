@@ -2,6 +2,69 @@ import random
 from environment import Agent, Environment
 from planner import RoutePlanner
 from simulator import Simulator
+import pickle
+import os
+
+
+
+class QLearning:
+    def __init__(self, epsilon = 0.1, alpha = 0.5, gamma = 0.9):
+        """
+        :param epsilon: probability of doing random move to deal with local stuck
+        :param alpha: learning rate
+        :param gamma: discount factor for reward
+        """
+        self.QTable = {} # key: (state, action), value: the Q value
+        self.epsilon = epsilon
+        self.alpha = alpha
+        self.gamma = gamma
+        self.possible_actions = Environment.valid_actions
+        self.time = 0
+        self.alpha_lower_bound = 0.01
+        self.epsilon_lower_bound = 0.01
+        self.learning_rate_decay_steps = 100
+        self.epsilon_decay_steps = 200
+
+    def policy(self, state):
+        """
+        :param state: current state
+        :return: action: argmax over action of QTable[(state, action)], but also small probability of moving randomly
+        """
+        if random.random() < self.epsilon:
+            action = random.choice(self.possible_actions)
+        else:
+            vals = [self.QTable[(state, a)] if (state, a) in self.QTable else 0 for a in self.possible_actions]
+            keys = [(state, a) for a in self.possible_actions]
+            action =  keys[vals.index(max(vals))][1]
+
+        return action
+
+    def update_QTable(self, state, action, reward, next_state):
+        if (state, action) not in self.QTable:
+            self.QTable[(state, action)] = 0
+
+        new_q = reward + self.gamma * max([self.QTable[(next_state, next_action)]
+                                           if (next_state, next_action) in self.QTable else 0
+                                           for next_action in self.possible_actions])
+        old_q = self.QTable[(state, action)]
+        self.QTable[(state, action)] = (1 - self.alpha) * self.QTable[(state, action)] + self.alpha * new_q
+        self.time += 1
+
+        # performance learning rate and probability decay
+        if self.time % self.learning_rate_decay_steps == 0:
+            if self.alpha > self.alpha_lower_bound:
+                self.alpha *= 0.9 #learning rate decay
+
+        if self.time % self.epsilon_decay_steps == 0:
+            if self.epsilon > self.epsilon_lower_bound:
+                self.epsilon *= 0.9 # random move probability decay
+
+
+        # if abs(self.QTable[(state, action)] - old_q) < 0.01:
+        #     print("converged")
+        # else:
+        #     print('not converged')
+
 
 class LearningAgent(Agent):
     """An agent that learns to drive in the smartcab world."""
@@ -11,28 +74,38 @@ class LearningAgent(Agent):
         self.color = 'red'  # override color
         self.planner = RoutePlanner(self.env, self)  # simple route planner to get next_waypoint
         # TODO: Initialize any additional variables here
+        # self.QLearning = QLearning(epsilon=0.5, alpha=0.95, gamma=0.9)
+        self.QLearning = pickle.load(open('./QLearning.pkl'))
 
     def reset(self, destination=None):
         self.planner.route_to(destination)
         # TODO: Prepare for a new trip; reset any variables here, if required
 
     def update(self, t):
-        # Gather inputs
+        # Gather states
         self.next_waypoint = self.planner.next_waypoint()  # from route planner, also displayed by simulator
         inputs = self.env.sense(self)
         deadline = self.env.get_deadline(self)
 
         # TODO: Update state
-        
+        self.state = (inputs['light'], inputs['oncoming'], inputs['left'], self.next_waypoint)
+
         # TODO: Select action according to your policy
-        action = None
+        action = self.QLearning.policy(self.state)
 
         # Execute action and get reward
         reward = self.env.act(self, action)
 
-        # TODO: Learn policy based on state, action, reward
+        # Gather next states
+        next_waypoint = self.planner.next_waypoint()  # from route planner, also displayed by simulator
+        next_inputs = self.env.sense(self)
+        next_deadline = self.env.get_deadline(self)
+        next_state = (next_inputs['light'], next_inputs['oncoming'], next_inputs['left'], next_waypoint)
 
-        print "LearningAgent.update(): deadline = {}, inputs = {}, action = {}, reward = {}".format(deadline, inputs, action, reward)  # [debug]
+        # TODO: Learn policy based on state, action, reward
+        self.QLearning.update_QTable(self.state, action, reward, next_state)
+
+        # print "LearningAgent.update(): deadline = {}, inputs = {}, action = {}, reward = {}".format(deadline, inputs, action, reward)  # [debug]
 
 
 def run():
@@ -41,12 +114,12 @@ def run():
     # Set up environment and agent
     e = Environment()  # create environment (also adds some dummy traffic)
     a = e.create_agent(LearningAgent)  # create agent
-    e.set_primary_agent(a, enforce_deadline=False)  # set agent to track
+    e.set_primary_agent(a, enforce_deadline=True)  # set agent to track
 
     # Now simulate it
-    sim = Simulator(e, update_delay=1.0)  # reduce update_delay or add 'display=False' to speed up simulation
-    sim.run(n_trials=10)  # press Esc or close pygame window to quit
-
+    sim = Simulator(e, update_delay=0.0001)  # reduce update_delay or add 'display=False' to speed up simulation
+    sim.run(n_trials=2000)# press Esc or close pygame window to quit
+    pickle.dump(a.QLearning, open(os.path.join('./', 'QLearning.pkl'), 'wb'))
 
 if __name__ == '__main__':
     run()

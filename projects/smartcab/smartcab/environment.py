@@ -90,7 +90,7 @@ class Environment(object):
 
         start_heading = random.choice(self.valid_headings)
         deadline = self.compute_dist(start, destination) * 5
-        print "Environment.reset(): Trial set up with start = {}, destination = {}, deadline = {}".format(start, destination, deadline)
+        # print "Environment.reset(): Trial set up with start = {}, destination = {}, deadline = {}".format(start, destination, deadline)
 
         # Initialize agent(s)
         for agent in self.agent_states.iterkeys():
@@ -117,6 +117,7 @@ class Environment(object):
             if self.enforce_deadline and self.agent_states[self.primary_agent]['deadline'] <= 0:
                 self.done = True
                 print "Environment.reset(): Primary agent could not reach destination within deadline!"
+                print(self.primary_agent.QLearning.alpha)
             self.agent_states[self.primary_agent]['deadline'] -= 1
 
     def sense(self, agent):
@@ -193,6 +194,7 @@ class Environment(object):
                     reward += 10  # bonus
                 self.done = True
                 print "Environment.act(): Primary agent has reached destination!"  # [debug]
+                print(agent.QLearning.alpha)
             self.status_text = "state: {}\naction: {}\nreward: {}".format(agent.get_state(), action, reward)
             #print "Environment.act() [POST]: location: {}, heading: {}, action: {}, reward: {}".format(location, heading, action, reward)  # [debug]
 
