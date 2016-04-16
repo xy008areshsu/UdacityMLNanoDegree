@@ -24,6 +24,8 @@ class QLearning:
         self.epsilon_lower_bound = 0.01
         self.learning_rate_decay_steps = 100
         self.epsilon_decay_steps = 200
+        self.learning_rate_decay_factor = 0.8
+        self.epsilon_decay_factor = 0.65
 
     def policy(self, state):
         """
@@ -53,14 +55,14 @@ class QLearning:
         # performance learning rate and probability decay
         if self.time % self.learning_rate_decay_steps == 0:
             if self.alpha > self.alpha_lower_bound:
-                self.alpha *= 0.9 #learning rate decay
+                self.alpha *= self.learning_rate_decay_factor #learning rate decay
 
         if self.time % self.epsilon_decay_steps == 0:
             if self.epsilon > self.epsilon_lower_bound:
-                self.epsilon *= 0.9 # random move probability decay
+                self.epsilon *= self.epsilon_decay_factor # random move probability decay
 
 
-        # if abs(self.QTable[(state, action)] - old_q) < 0.01:
+        # if abs(self.QTable[(state, action)] - old_q) < 0.1:
         #     print("converged")
         # else:
         #     print('not converged')
@@ -74,12 +76,26 @@ class LearningAgent(Agent):
         self.color = 'red'  # override color
         self.planner = RoutePlanner(self.env, self)  # simple route planner to get next_waypoint
         # TODO: Initialize any additional variables here
-        self.QLearning = QLearning(epsilon=0.5, alpha=0.95, gamma=0.9)
+        self.QLearning = QLearning(epsilon=0.3, alpha=0.95, gamma=0.9)
         # self.QLearning = pickle.load(open('./QLearning.pkl'))
 
     def reset(self, destination=None):
         self.planner.route_to(destination)
         # TODO: Prepare for a new trip; reset any variables here, if required
+
+    def is_action_okay(self, inputs):
+        action_okay = True
+        if self.next_waypoint == 'right':
+            if inputs['light'] == 'red' and inputs['left'] == 'forward':
+                action_okay = False
+        elif self.next_waypoint == 'forward':
+            if inputs['light'] == 'red':
+                action_okay = False
+        elif self.next_waypoint == 'left':
+            if inputs['light'] == 'red' or (inputs['oncoming'] == 'forward' or inputs['oncoming'] == 'right'):
+                action_okay = False
+
+        return action_okay
 
     def update(self, t):
         # Gather states
@@ -88,7 +104,9 @@ class LearningAgent(Agent):
         deadline = self.env.get_deadline(self)
 
         # TODO: Update state
-        self.state = (inputs['light'], inputs['oncoming'], inputs['left'], self.next_waypoint)
+        action_okay = self.is_action_okay(inputs)
+        self.state = (action_okay, self.next_waypoint, deadline < 3)
+        # self.state = (inputs['light'], inputs['oncoming'], inputs['left'], self.next_waypoint)
 
         # TODO: Select action according to your policy
         action = self.QLearning.policy(self.state)
@@ -100,7 +118,9 @@ class LearningAgent(Agent):
         next_waypoint = self.planner.next_waypoint()  # from route planner, also displayed by simulator
         next_inputs = self.env.sense(self)
         next_deadline = self.env.get_deadline(self)
-        next_state = (next_inputs['light'], next_inputs['oncoming'], next_inputs['left'], next_waypoint)
+        next_action_okay = self.is_action_okay(next_inputs)
+        next_state = (next_action_okay, next_waypoint, next_deadline < 3)
+        # next_state = (next_inputs['light'], next_inputs['oncoming'], next_inputs['left'], next_waypoint)
 
         # TODO: Learn policy based on state, action, reward
         self.QLearning.update_QTable(self.state, action, reward, next_state)
@@ -118,7 +138,7 @@ def run():
 
     # Now simulate it
     sim = Simulator(e, update_delay=0.0001)  # reduce update_delay or add 'display=False' to speed up simulation
-    sim.run(n_trials=500)# press Esc or close pygame window to quit
+    sim.run(n_trials=200)# press Esc or close pygame window to quit
     # pickle.dump(a.QLearning, open(os.path.join('./', 'QLearning.pkl'), 'wb'))
 
 if __name__ == '__main__':
