@@ -119,13 +119,13 @@ class Environment(object):
             if agent_deadline <= self.hard_time_limit:
                 self.done = True
                 print "Environment.step(): Primary agent hit hard time limit ({})! Trial aborted.".format(self.hard_time_limit)
-                print(self.primary_agent.QLearning.alpha)
-                print(self.primary_agent.QLearning.epsilon)
+                # print(self.primary_agent.QLearning.alpha)
+                # print(self.primary_agent.QLearning.epsilon)
             elif self.enforce_deadline and agent_deadline <= 0:
                 self.done = True
                 print "Environment.step(): Primary agent ran out of time! Trial aborted."
-                print(self.primary_agent.QLearning.alpha)
-                print(self.primary_agent.QLearning.epsilon)
+                # print(self.primary_agent.QLearning.alpha)
+                # print(self.primary_agent.QLearning.epsilon)
             self.agent_states[self.primary_agent]['deadline'] = agent_deadline - 1
 
 
@@ -210,8 +210,8 @@ class Environment(object):
                     reward += 10  # bonus
                 self.done = True
                 print "Environment.act(): Primary agent has reached destination!"  # [debug]
-                print(agent.QLearning.alpha)
-                print(agent.QLearning.epsilon)
+                # print(agent.QLearning.alpha)
+                # print(agent.QLearning.epsilon)
             self.status_text = "state: {}\naction: {}\nreward: {}".format(agent.get_state(), action, reward)
             #print "Environment.act() [POST]: location: {}, heading: {}, action: {}, reward: {}".format(location, heading, action, reward)  # [debug]
 

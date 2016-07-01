@@ -138,7 +138,7 @@ def run():
 
     # Now simulate it
     sim = Simulator(e, update_delay=0.0001)  # reduce update_delay or add 'display=False' to speed up simulation
-    sim.run(n_trials=500)# press Esc or close pygame window to quit
+    sim.run(n_trials=100)# press Esc or close pygame window to quit
     # pickle.dump(a.QLearning, open(os.path.join('./', 'QLearning.pkl'), 'wb'))
 
 if __name__ == '__main__':
